@@ -72,6 +72,23 @@ impl Zuora {
     /// Generate and set an OAuth token against this instance of the Zuora client to allow bearer
     /// token in subsequent HTTP requests
     ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::env;
+    /// use zuora_rest_client::Zuora;
+    ///
+    /// let mut client = Zuora::new(
+    ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
+    ///     env::var("ZUORA_CLIENT_SECRET").unwrap_or_default(),
+    ///     String::from("https://rest.sandbox.eu.zuora.com"),
+    ///     String::from("/v1"),
+    ///     3,
+    /// );
+    /// let result = client.generate_token();
+    /// assert_eq!(result.unwrap(), ());
+    /// ```
+    ///
     /// # Errors
     ///
     /// This method may return a `reqwest::Error` where the call to Zuora was not successful
@@ -101,10 +118,21 @@ impl Zuora {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```
+    /// use std::env;
+    /// use zuora_rest_client::Zuora;
+    ///
+    /// let mut client = Zuora::new(
+    ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
+    ///     env::var("ZUORA_CLIENT_SECRET").unwrap_or_default(),
+    ///     String::from("https://rest.sandbox.eu.zuora.com"),
+    ///     String::from("/v1"),
+    ///     3,
+    /// );
     /// let get = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
     /// println!("{:?}", get);
     /// ```
+    ///
     /// # Errors
     ///
     /// This method may return a `reqwest::Error` where the call to Zuora was not successful
@@ -204,6 +232,23 @@ mod tests {
         let result = client.generate_token();
         assert_eq!(result.unwrap(), ());
         assert_eq!(client.token, Some(token));
+        mock_request.assert();
+    }
+    #[test]
+    fn get_success() {
+        let client = init();
+        let body = r#"{ 
+            "products": [], 
+            "success": true 
+        }"#;
+        let mock_request = mock("GET", "/v1/catalog/products")
+            .with_status(200)
+            .with_body(&body)
+            .create();
+
+        let result = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
+        let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(result.unwrap(), expected);
         mock_request.assert();
     }
 }

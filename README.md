@@ -1,5 +1,9 @@
 # zuora_rest_client
 
+[![crates.io](https://img.shields.io/crates/v/zuora_rest_client.svg)](https://crates.io/crates/zuora_rest_client)
+[![Documentation](https://docs.rs/zuora_rest_client/badge.svg)](https://docs.rs/zuora_rest_client)
+[![MIT licensed](https://img.shields.io/crates/l/zuora_rest_client.svg)](./LICENSE)
+
 A HTTP Client built on top of the [reqwest](https://crates.io/crates/reqwest) package for accessing the [Zuora Billing REST API](https://www.zuora.com/developer/api-reference/)
 
 ## Example
