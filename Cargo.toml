@@ -1,8 +1,14 @@
 [package]
 name = "zuora_rest_client"
 version = "0.1.0"
-authors = ["Peter Bryant <pbryant@peterbryant.me.uk>"]
 description = "A HTTP Client built on top of the reqwest package for accessing the Zuora Billing REST API."
+keywords = ["http", "request", "client", "zuora"]
+categories = ["web-programming::http-client"]
+repository = "https://github.com/peteyb/zuora_rest_client"
+documentation = "https://docs.rs/zuora_rest_client"
+authors = ["Peter Bryant <pbryant@peterbryant.me.uk>"]
+readme = "README.md"
+license = "MIT"
 edition = "2018"
 
 [dependencies]
