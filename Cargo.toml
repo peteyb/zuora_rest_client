@@ -2,6 +2,7 @@
 name = "zuora_rest_client"
 version = "0.1.0"
 authors = ["Peter Bryant <pbryant@peterbryant.me.uk>"]
+description = "A HTTP Client built on top of the reqwest package for accessing the Zuora Billing REST API."
 edition = "2018"
 
 [dependencies]

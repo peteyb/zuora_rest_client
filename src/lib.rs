@@ -1,9 +1,10 @@
 //! # Zuora REST Client
 //!
 //! `zuora_rest_client` is a HTTP Client built on top of the `reqwest` package  for accessing the
-//! Zuora API via REST
+//! [Zuora Billing REST API](https://www.zuora.com/developer/api-reference/)
 //!
-//! This package only currently provides an interface for performing GET requests
+//! This package only currently provides an interface for performing OAuth authenticated GET
+//! requests
 //!
 //! # TODO
 //!
