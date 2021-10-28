@@ -1,13 +1,6 @@
-use reqwest::{
-    header::{HeaderMap, HeaderValue, CONTENT_TYPE},
-    Client, ClientBuilder,
-};
 use serde::{Deserialize, Serialize};
-use serde_json;
-use std::collections::HashMap;
-use std::future::ready;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct AccessToken {
     access_token: String,
     token_type: String,
@@ -71,8 +64,10 @@ impl Zuora {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockito;
+    use mockito::mock;
     #[test]
-    fn client_endpoint() {
+    fn endpoint() {
         let client = Zuora::new(
             String::from("client_id"),
             String::from("client_secret"),
@@ -81,5 +76,40 @@ mod tests {
             3,
         );
         assert_eq!(client.endpoint(), "https://rest.sandbox.eu.zuora.com/v1");
+    }
+
+    #[test]
+    fn generate_token() {
+        let mock_request = mock("POST", "/oauth/token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{ 
+                "access_token": "access", 
+                "token_type": "bearer", 
+                "expires_in": 100, 
+                "scope": "scope", 
+                "jti": "jti" 
+            }"#,
+            )
+            .create();
+
+        let host = mockito::server_url();
+        let client = Zuora::new(
+            String::from("client_id"),
+            String::from("client_secret"),
+            host,
+            String::from("/v1"),
+            3,
+        );
+        let token = AccessToken {
+            access_token: String::from("access"),
+            token_type: String::from("bearer"),
+            expires_in: 100,
+            scope: String::from("scope"),
+            jti: String::from("jti"),
+        };
+        assert_eq!(client.generate_token().unwrap(), token);
+        mock_request.assert();
     }
 }
