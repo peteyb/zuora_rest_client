@@ -3,13 +3,14 @@
 //! `zuora_rest_client` is a HTTP Client built on top of the `reqwest` package  for accessing the
 //! [Zuora Billing REST API](https://www.zuora.com/developer/api-reference/)
 //!
-//! This package only currently provides an interface for performing OAuth authenticated GET
+//! This package currently only provides an interface for performing OAuth authenticated GET
 //! requests
 //!
 //! # TODO
 //!
-//! - Add retry logic
 //! - Add missing HTTP methods
+//! - Add retry logic
+//! - Hook up to a CI server
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 

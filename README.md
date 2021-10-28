@@ -6,13 +6,21 @@
 
 A HTTP Client built on top of the [reqwest](https://crates.io/crates/reqwest) package for accessing the [Zuora Billing REST API](https://www.zuora.com/developer/api-reference/)
 
+## TODOs
+
+This package currently only provides an interface for performing OAuth authenticated GET requests
+
+- Add missing HTTP methods
+- Add retry logic
+- Hook up to a CI server
+
 ## Example
 
-This example uses [serde_json](https://crates.io/crates/serde_json) to prepare the data for a GET request, so your `Cargo.toml` could look like this:
+This example uses [serde_json](https://crates.io/crates/serde_json) to prepare the data for a GET request. Your `Cargo.toml` could look like this:
 
 ```toml
 [dependencies]
-zuora_rest_client = "0.1.0"
+zuora_rest_client = "0.1"
 serde_json = "1"
 ```
 
@@ -20,26 +28,19 @@ And then the code:
 
 ```rust
 use std::env;
-use std::process;
 use zuora_rest_client::Zuora;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Not enough arguments");
-        process::exit(1);
-    }
-
     let mut client = Zuora::new(
         env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
         env::var("ZUORA_CLIENT_SECRET").unwrap_or_default(),
-        args[1].clone(),
-        args[2].clone(),
+        String::from("https://rest.sandbox.eu.zuora.com"),
+        String::from("/v1"),
         3,
     );
 
-    let token = client.generate_token();
-    println!("{:?}", token);
+    let result = client.generate_token();
+    println!("{:?}", result);
 
     let get = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
     println!("{:?}", get);
