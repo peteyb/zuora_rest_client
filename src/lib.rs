@@ -1,7 +1,8 @@
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct AccessToken {
+struct AccessToken {
     access_token: String,
     token_type: String,
     expires_in: usize,
@@ -11,12 +12,13 @@ pub struct AccessToken {
 
 #[derive(Debug)]
 pub struct Zuora {
-    client: reqwest::Client,
     client_id: String,
     client_secret: String,
     domain: String,
     version: String,
     retry_attempts: usize,
+    client: reqwest::Client,
+    token: Option<AccessToken>,
 }
 
 impl Zuora {
@@ -28,19 +30,34 @@ impl Zuora {
         retry_attempts: usize,
     ) -> Self {
         Self {
-            client: reqwest::Client::new(),
             client_id,
             client_secret,
             domain,
             version,
             retry_attempts,
+            client: reqwest::Client::new(),
+            token: None,
         }
     }
     fn endpoint(&self) -> String {
         format!("{}{}", self.domain, self.version)
     }
+
+    fn construct_headers(&self) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+
+        if let Some(token) = &self.token {
+            let bearer = format!("Bearer {}", { &token.access_token });
+            headers.insert(
+                AUTHORIZATION,
+                HeaderValue::from_str(bearer.as_str()).unwrap(),
+            );
+        }
+
+        headers
+    }
     #[tokio::main]
-    pub async fn generate_token(&self) -> Result<AccessToken, reqwest::Error> {
+    pub async fn generate_token(&mut self) -> Result<(), reqwest::Error> {
         let request_url = format!("{}/oauth/token", self.domain);
 
         let data = [
@@ -51,10 +68,33 @@ impl Zuora {
 
         let resp = self.client.post(&request_url).form(&data).send().await;
         match resp {
+            Ok(x) if x.status().is_success() => {
+                let data = x.text().await.unwrap();
+                self.token = Some(serde_json::from_str(&data[..]).unwrap());
+                Ok(())
+            }
+            Ok(_x) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+    #[tokio::main]
+    pub async fn get(
+        &self,
+        path: &str,
+        payload: serde_json::Value,
+    ) -> Result<serde_json::Value, reqwest::Error> {
+        let resp = self
+            .client
+            .get(self.endpoint() + path)
+            .headers(self.construct_headers())
+            .form(&payload)
+            .send()
+            .await;
+        match resp {
             Ok(x) => {
                 let data = x.text().await.unwrap();
-                let token: AccessToken = serde_json::from_str(&data[..]).unwrap();
-                Ok(token)
+                let value = serde_json::from_str(&data[..]).unwrap();
+                Ok(value)
             }
             Err(err) => Err(err),
         }
@@ -66,16 +106,43 @@ mod tests {
     use super::*;
     use mockito;
     use mockito::mock;
-    #[test]
-    fn endpoint() {
-        let client = Zuora::new(
+    fn init() -> Zuora {
+        let host = mockito::server_url();
+        Zuora::new(
             String::from("client_id"),
             String::from("client_secret"),
-            String::from("https://rest.sandbox.eu.zuora.com"),
+            host,
             String::from("/v1"),
             3,
-        );
-        assert_eq!(client.endpoint(), "https://rest.sandbox.eu.zuora.com/v1");
+        )
+    }
+    #[test]
+    fn endpoint() {
+        let client = init();
+        assert_eq!(client.endpoint(), format!("{}/v1", client.domain));
+    }
+
+    #[test]
+    fn construct_headers_default() {
+        let client = init();
+        let headers = client.construct_headers();
+        assert_eq!(headers.len(), 0);
+    }
+
+    #[test]
+    fn construct_headers_auth() {
+        let mut client = init();
+        let token = AccessToken {
+            access_token: String::from("access"),
+            token_type: String::from("bearer"),
+            expires_in: 100,
+            scope: String::from("scope"),
+            jti: String::from("jti"),
+        };
+        client.token = Some(token);
+        let headers = client.construct_headers();
+        assert!(headers.contains_key(AUTHORIZATION));
+        assert_eq!(headers[AUTHORIZATION], "Bearer access");
     }
 
     #[test]
@@ -94,14 +161,7 @@ mod tests {
             )
             .create();
 
-        let host = mockito::server_url();
-        let client = Zuora::new(
-            String::from("client_id"),
-            String::from("client_secret"),
-            host,
-            String::from("/v1"),
-            3,
-        );
+        let mut client = init();
         let token = AccessToken {
             access_token: String::from("access"),
             token_type: String::from("bearer"),
@@ -109,7 +169,9 @@ mod tests {
             scope: String::from("scope"),
             jti: String::from("jti"),
         };
-        assert_eq!(client.generate_token().unwrap(), token);
+        let result = client.generate_token();
+        assert_eq!(result.unwrap(), ());
+        assert_eq!(client.token, Some(token));
         mock_request.assert();
     }
 }
