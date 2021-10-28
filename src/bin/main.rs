@@ -1,9 +1,7 @@
-// use std::collections::HashMap;
 use std::env;
 use std::process;
 use zuora_rest_client::Zuora;
 
-// #[tokio::main]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {

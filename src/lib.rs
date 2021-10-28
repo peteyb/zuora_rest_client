@@ -1,3 +1,14 @@
+//! # Zuora REST Client
+//!
+//! `zuora_rest_client` is a HTTP Client built on top of the `reqwest` package  for accessing the
+//! Zuora API via REST
+//!
+//! This package only currently provides an interface for performing GET requests
+//!
+//! # TODO
+//!
+//! - Add retry logic
+//! - Add missing HTTP methods
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +32,7 @@ pub struct Zuora {
     token: Option<AccessToken>,
 }
 
+/// Create an instance of a Zuora client
 impl Zuora {
     pub fn new(
         client_id: String,
@@ -56,6 +68,13 @@ impl Zuora {
 
         headers
     }
+    /// Generate and set an OAuth token against this instance of the Zuora client to allow bearer
+    /// token in subsequent HTTP requests
+    ///
+    /// # Errors
+    ///
+    /// This method may return a `reqwest::Error` where the call to Zuora was not successful
+    ///
     #[tokio::main]
     pub async fn generate_token(&mut self) -> Result<(), reqwest::Error> {
         let request_url = format!("{}/oauth/token", self.domain);
@@ -77,6 +96,18 @@ impl Zuora {
             Err(err) => Err(err),
         }
     }
+    /// Perform GET request on Zuora API
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let get = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
+    /// println!("{:?}", get);
+    /// ```
+    /// # Errors
+    ///
+    /// This method may return a `reqwest::Error` where the call to Zuora was not successful
+    ///
     #[tokio::main]
     pub async fn get(
         &self,
