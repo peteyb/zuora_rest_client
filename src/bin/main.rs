@@ -20,7 +20,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token = client.generate_token();
     println!("{:?}", token);
 
-    let get = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
-    println!("{:?}", get);
+    // let get = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
+    // println!("{:?}", get);
+
+    let account_id = String::from("8adc8f9968a1c7d60168a4a88b4d6e9f");
+    let zoql = format!(
+        "SELECT Id, Name, Version from Subscription where AccountId = '{}'",
+        account_id
+    );
+    let query = client.query(&zoql);
+    println!("{:?}", query);
     Ok(())
 }

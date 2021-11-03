@@ -34,7 +34,6 @@ pub struct Zuora {
     token: Option<AccessToken>,
 }
 
-/// Create an instance of a Zuora client
 impl Zuora {
     pub fn new(
         client_id: String,
@@ -194,6 +193,7 @@ impl Zuora {
         path: &str,
         payload: serde_json::Value,
     ) -> Result<serde_json::Value, reqwest::Error> {
+        println!("payload: {}", payload);
         let resp = self
             .client
             .post(self.endpoint() + path)
@@ -204,6 +204,7 @@ impl Zuora {
         match resp {
             Ok(x) => {
                 let data = x.text().await.unwrap();
+                println!("test: {:?}", data);
                 let value = serde_json::from_str(&data[..]).unwrap();
                 Ok(value)
             }
@@ -255,6 +256,16 @@ impl Zuora {
             }
             Err(err) => Err(err),
         }
+    }
+
+    pub fn query(&self, query_string: &str) -> Result<serde_json::Value, reqwest::Error> {
+        let payload = format!(
+            "{{
+            \"queryString\": \"{}\"
+        }}",
+            query_string
+        );
+        self.post("/action/query", serde_json::from_str(&payload).unwrap())
     }
 }
 
@@ -390,6 +401,24 @@ mod tests {
         }";
         let result = client.put("/accounts/10000", serde_json::from_str(payload).unwrap());
         println!("{:?}", result);
+        let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(result.unwrap(), expected);
+        mock_request.assert();
+    }
+
+    #[test]
+    fn query_success() {
+        let client = init();
+        let body = r#"{ 
+            "success": true 
+        }"#;
+        let mock_request = mock("POST", "/v1/action/query")
+            .match_body("{\"queryString\":\"SELECT Id, Name, Version from Subscription\"}")
+            .with_status(200)
+            .with_body(&body)
+            .create();
+
+        let result = client.query("SELECT Id, Name, Version from Subscription");
         let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(result.unwrap(), expected);
         mock_request.assert();
