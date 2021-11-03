@@ -53,6 +53,7 @@ impl Zuora {
             token: None,
         }
     }
+
     fn endpoint(&self) -> String {
         format!("{}{}", self.domain, self.version)
     }
@@ -70,6 +71,7 @@ impl Zuora {
 
         headers
     }
+
     /// Generate and set an OAuth token against this instance of the Zuora client to allow bearer
     /// token in subsequent HTTP requests
     ///
@@ -94,6 +96,7 @@ impl Zuora {
     ///
     /// This method may return a `reqwest::Error` where the call to Zuora was not successful
     ///
+
     #[tokio::main]
     pub async fn generate_token(&mut self) -> Result<(), reqwest::Error> {
         let request_url = format!("{}/oauth/token", self.domain);
@@ -115,6 +118,7 @@ impl Zuora {
             Err(err) => Err(err),
         }
     }
+
     /// Perform GET request on Zuora API
     ///
     /// # Example
@@ -148,7 +152,99 @@ impl Zuora {
             .client
             .get(self.endpoint() + path)
             .headers(self.construct_headers())
-            .form(&payload)
+            .json(&payload)
+            .send()
+            .await;
+        match resp {
+            Ok(x) => {
+                let data = x.text().await.unwrap();
+                let value = serde_json::from_str(&data[..]).unwrap();
+                Ok(value)
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Perform POST request on Zuora API
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::env;
+    /// use zuora_rest_client::Zuora;
+    ///
+    /// let mut client = Zuora::new(
+    ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
+    ///     env::var("ZUORA_CLIENT_SECRET").unwrap_or_default(),
+    ///     String::from("https://rest.sandbox.eu.zuora.com"),
+    ///     String::from("/v1"),
+    ///     3,
+    /// );
+    /// let post = client.post("/action/query", serde_json::from_str("{}").unwrap());
+    /// println!("{:?}", post);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// This method may return a `reqwest::Error` where the call to Zuora was not successful
+    ///
+    #[tokio::main]
+    pub async fn post(
+        &self,
+        path: &str,
+        payload: serde_json::Value,
+    ) -> Result<serde_json::Value, reqwest::Error> {
+        let resp = self
+            .client
+            .post(self.endpoint() + path)
+            .headers(self.construct_headers())
+            .json(&payload)
+            .send()
+            .await;
+        match resp {
+            Ok(x) => {
+                let data = x.text().await.unwrap();
+                let value = serde_json::from_str(&data[..]).unwrap();
+                Ok(value)
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Perform PUT request on Zuora API
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::env;
+    /// use zuora_rest_client::Zuora;
+    ///
+    /// let mut client = Zuora::new(
+    ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
+    ///     env::var("ZUORA_CLIENT_SECRET").unwrap_or_default(),
+    ///     String::from("https://rest.sandbox.eu.zuora.com"),
+    ///     String::from("/v1"),
+    ///     3,
+    /// );
+    /// let put = client.put("/accounts/10000", serde_json::from_str("{\"billToContact\":{\"workEmail\":\"someone@test.com\"}}").unwrap());
+    /// println!("{:?}", put);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// This method may return a `reqwest::Error` where the call to Zuora was not successful
+    ///
+    #[tokio::main]
+    pub async fn put(
+        &self,
+        path: &str,
+        payload: serde_json::Value,
+    ) -> Result<serde_json::Value, reqwest::Error> {
+        let resp = self
+            .client
+            .put(self.endpoint() + path)
+            .headers(self.construct_headers())
+            .json(&payload)
             .send()
             .await;
         match resp {
@@ -167,6 +263,7 @@ mod tests {
     use super::*;
     use mockito;
     use mockito::mock;
+
     fn init() -> Zuora {
         let host = mockito::server_url();
         Zuora::new(
@@ -177,6 +274,7 @@ mod tests {
             3,
         )
     }
+
     #[test]
     fn endpoint() {
         let client = init();
@@ -235,6 +333,7 @@ mod tests {
         assert_eq!(client.token, Some(token));
         mock_request.assert();
     }
+
     #[test]
     fn get_success() {
         let client = init();
@@ -248,6 +347,49 @@ mod tests {
             .create();
 
         let result = client.get("/catalog/products", serde_json::from_str("{}").unwrap());
+        let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(result.unwrap(), expected);
+        mock_request.assert();
+    }
+
+    #[test]
+    fn post_success() {
+        let client = init();
+        let body = r#"{ 
+            "success": true 
+        }"#;
+        let mock_request = mock("POST", "/v1/action/query")
+            .with_status(200)
+            .with_body(&body)
+            .create();
+
+        let payload = "{\"queryString\":\"SELECT Id, Name, Version from Subscription\"}";
+        let result = client.post("/action/query", serde_json::from_str(payload).unwrap());
+        let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(result.unwrap(), expected);
+        mock_request.assert();
+    }
+
+    #[test]
+    fn put_success() {
+        let client = init();
+        let body = r#"{ 
+            "success": true 
+        }"#;
+        let mock_request = mock("PUT", "/v1/accounts/10000")
+            .with_status(200)
+            .with_body(&body)
+            .create();
+
+        let payload = "
+        {
+            \"billToContact\": 
+            {
+                \"workEmail\": \"someone@test.com\"
+            }
+        }";
+        let result = client.put("/accounts/10000", serde_json::from_str(payload).unwrap());
+        println!("{:?}", result);
         let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(result.unwrap(), expected);
         mock_request.assert();
