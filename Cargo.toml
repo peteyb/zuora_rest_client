@@ -1,6 +1,6 @@
 [package]
 name = "zuora_rest_client"
-version = "0.1.3"
+version = "0.1.4"
 description = "A HTTP Client built on top of the reqwest package for accessing the Zuora Billing REST API."
 keywords = ["http", "request", "client", "zuora"]
 categories = ["web-programming::http-client"]
