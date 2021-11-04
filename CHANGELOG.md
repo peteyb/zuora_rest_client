@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [0.1.3] -  2021-11-04
+
+### Added
+
+- Added `query` method to peform ZOQL requests
+- Added `objects` module for Zuora object model and response traits
+
 # [0.1.2] -  2021-10-28
 
 ### Added
