@@ -1,6 +1,7 @@
 use std::env;
 use std::process;
 use zuora_rest_client::Zuora;
+use zuora_rest_client::ZuoraSubscriptionResponse;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
@@ -28,7 +29,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "SELECT Id, Name, Version from Subscription where AccountId = '{}'",
         account_id
     );
-    let query = client.query(&zoql);
-    println!("{:?}", query);
+    let query: ZuoraSubscriptionResponse = client.query(&zoql).unwrap();
+    // println!("{:?}", query);
+    // let mut subscriptions: Vec<serde_json::Value> = Vec::new();
+    for record in query.records {
+        println!("{:?}", record);
+    }
+
     Ok(())
 }

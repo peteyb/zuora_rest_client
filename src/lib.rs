@@ -8,9 +8,14 @@
 //!
 //! # TODO
 //!
-//! - Add missing HTTP methods
 //! - Add retry logic
 //! - Hook up to a CI server
+//! - Use generics instead of returning serde_json::Value
+
+mod objects;
+
+pub use self::objects::ZuoraSubscriptionResponse;
+
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 
@@ -157,8 +162,7 @@ impl Zuora {
         match resp {
             Ok(x) => {
                 let data = x.text().await.unwrap();
-                let value = serde_json::from_str(&data[..]).unwrap();
-                Ok(value)
+                Ok(serde_json::from_str(&data[..]).unwrap())
             }
             Err(err) => Err(err),
         }
@@ -193,7 +197,6 @@ impl Zuora {
         path: &str,
         payload: serde_json::Value,
     ) -> Result<serde_json::Value, reqwest::Error> {
-        println!("payload: {}", payload);
         let resp = self
             .client
             .post(self.endpoint() + path)
@@ -204,9 +207,7 @@ impl Zuora {
         match resp {
             Ok(x) => {
                 let data = x.text().await.unwrap();
-                println!("test: {:?}", data);
-                let value = serde_json::from_str(&data[..]).unwrap();
-                Ok(value)
+                Ok(serde_json::from_str(&data[..]).unwrap())
             }
             Err(err) => Err(err),
         }
@@ -251,21 +252,27 @@ impl Zuora {
         match resp {
             Ok(x) => {
                 let data = x.text().await.unwrap();
-                let value = serde_json::from_str(&data[..]).unwrap();
-                Ok(value)
+                Ok(serde_json::from_str(&data[..]).unwrap())
             }
             Err(err) => Err(err),
         }
     }
 
-    pub fn query(&self, query_string: &str) -> Result<serde_json::Value, reqwest::Error> {
+    pub fn query<T: for<'de> serde::Deserialize<'de>>(
+        &self,
+        query_string: &str,
+    ) -> Result<T, reqwest::Error> {
         let payload = format!(
             "{{
             \"queryString\": \"{}\"
         }}",
             query_string
         );
-        self.post("/action/query", serde_json::from_str(&payload).unwrap())
+        let value = self.post("/action/query", serde_json::from_str(&payload).unwrap());
+        match value {
+            Ok(x) => Ok(serde_json::from_value(x).unwrap()),
+            Err(err) => Err(err),
+        }
     }
 }
 
@@ -410,7 +417,8 @@ mod tests {
     fn query_success() {
         let client = init();
         let body = r#"{ 
-            "success": true 
+            "done": true,
+            "records": []
         }"#;
         let mock_request = mock("POST", "/v1/action/query")
             .match_body("{\"queryString\":\"SELECT Id, Name, Version from Subscription\"}")
@@ -418,9 +426,12 @@ mod tests {
             .with_body(&body)
             .create();
 
-        let result = client.query("SELECT Id, Name, Version from Subscription");
+        let result: ZuoraSubscriptionResponse = client
+            .query("SELECT Id, Name, Version from Subscription")
+            .unwrap();
         let expected: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(result.unwrap(), expected);
+        let expected = serde_json::from_value(expected).unwrap();
+        assert_eq!(result, expected);
         mock_request.assert();
     }
 }
