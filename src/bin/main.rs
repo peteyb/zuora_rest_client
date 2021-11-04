@@ -2,6 +2,7 @@ use std::env;
 use std::process;
 use zuora_rest_client::Zuora;
 use zuora_rest_client::ZuoraSubscriptionResponse;
+use zuora_rest_client::ZuoraTrait;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();

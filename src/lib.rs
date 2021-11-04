@@ -39,6 +39,31 @@ pub struct Zuora {
     token: Option<AccessToken>,
 }
 
+pub trait ZuoraTrait {
+    fn endpoint(&self) -> String;
+    fn construct_headers(&self) -> HeaderMap;
+    fn generate_token(&mut self) -> Result<(), reqwest::Error>;
+    fn get(
+        &self,
+        path: &str,
+        payload: serde_json::Value,
+    ) -> Result<serde_json::Value, reqwest::Error>;
+    fn post(
+        &self,
+        path: &str,
+        payload: serde_json::Value,
+    ) -> Result<serde_json::Value, reqwest::Error>;
+    fn put(
+        &self,
+        path: &str,
+        payload: serde_json::Value,
+    ) -> Result<serde_json::Value, reqwest::Error>;
+    fn query<T: for<'de> serde::Deserialize<'de>>(
+        &self,
+        query_string: &str,
+    ) -> Result<T, reqwest::Error>;
+}
+
 impl Zuora {
     pub fn new(
         client_id: String,
@@ -57,7 +82,9 @@ impl Zuora {
             token: None,
         }
     }
+}
 
+impl ZuoraTrait for Zuora {
     fn endpoint(&self) -> String {
         format!("{}{}", self.domain, self.version)
     }
@@ -83,7 +110,7 @@ impl Zuora {
     ///
     /// ```
     /// use std::env;
-    /// use zuora_rest_client::Zuora;
+    /// use zuora_rest_client::{Zuora,ZuoraTrait};
     ///
     /// let mut client = Zuora::new(
     ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
@@ -102,7 +129,7 @@ impl Zuora {
     ///
 
     #[tokio::main]
-    pub async fn generate_token(&mut self) -> Result<(), reqwest::Error> {
+    async fn generate_token(&mut self) -> Result<(), reqwest::Error> {
         let request_url = format!("{}/oauth/token", self.domain);
 
         let data = [
@@ -129,7 +156,7 @@ impl Zuora {
     ///
     /// ```
     /// use std::env;
-    /// use zuora_rest_client::Zuora;
+    /// use zuora_rest_client::{Zuora,ZuoraTrait};
     ///
     /// let mut client = Zuora::new(
     ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
@@ -147,7 +174,7 @@ impl Zuora {
     /// This method may return a `reqwest::Error` where the call to Zuora was not successful
     ///
     #[tokio::main]
-    pub async fn get(
+    async fn get(
         &self,
         path: &str,
         payload: serde_json::Value,
@@ -174,7 +201,7 @@ impl Zuora {
     ///
     /// ```
     /// use std::env;
-    /// use zuora_rest_client::Zuora;
+    /// use zuora_rest_client::{Zuora,ZuoraTrait};
     ///
     /// let mut client = Zuora::new(
     ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
@@ -192,7 +219,7 @@ impl Zuora {
     /// This method may return a `reqwest::Error` where the call to Zuora was not successful
     ///
     #[tokio::main]
-    pub async fn post(
+    async fn post(
         &self,
         path: &str,
         payload: serde_json::Value,
@@ -219,7 +246,7 @@ impl Zuora {
     ///
     /// ```
     /// use std::env;
-    /// use zuora_rest_client::Zuora;
+    /// use zuora_rest_client::{Zuora,ZuoraTrait};
     ///
     /// let mut client = Zuora::new(
     ///     env::var("ZUORA_CLIENT_ID").unwrap_or_default(),
@@ -237,7 +264,7 @@ impl Zuora {
     /// This method may return a `reqwest::Error` where the call to Zuora was not successful
     ///
     #[tokio::main]
-    pub async fn put(
+    async fn put(
         &self,
         path: &str,
         payload: serde_json::Value,
@@ -258,7 +285,7 @@ impl Zuora {
         }
     }
 
-    pub fn query<T: for<'de> serde::Deserialize<'de>>(
+    fn query<T: for<'de> serde::Deserialize<'de>>(
         &self,
         query_string: &str,
     ) -> Result<T, reqwest::Error> {
@@ -278,6 +305,7 @@ impl Zuora {
 
 #[cfg(test)]
 mod tests {
+    use super::ZuoraTrait;
     use super::*;
     use mockito;
     use mockito::mock;
